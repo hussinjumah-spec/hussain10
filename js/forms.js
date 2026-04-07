@@ -94,6 +94,7 @@ function saveForm() {
     displayMode: document.getElementById('form-display-mode').value,
     active: document.getElementById('form-active').checked,
     showScore: document.getElementById('form-show-score').checked,
+    webhookUrl: document.getElementById('form-webhook').value.trim(),
     logo: formLogoData,
     questions: currentQuestions,
     updatedAt: new Date().toISOString()
@@ -136,6 +137,7 @@ function editForm(id) {
   document.getElementById('form-display-mode').value = form.displayMode || 'one-by-one';
   document.getElementById('form-active').checked = form.active !== false;
   document.getElementById('form-show-score').checked = form.showScore !== false;
+  document.getElementById('form-webhook').value = form.webhookUrl || '';
 
   const preview = document.getElementById('form-logo-preview');
   if (form.logo) preview.innerHTML = `<img src="${form.logo}" alt="logo">`;
@@ -498,6 +500,7 @@ function initNewForm() {
   document.getElementById('form-display-mode').value = 'one-by-one';
   document.getElementById('form-active').checked = true;
   document.getElementById('form-show-score').checked = true;
+  document.getElementById('form-webhook').value = '';
   document.getElementById('form-logo-preview').innerHTML = '<i class="fas fa-image"></i><span>إضافة شعار</span>';
   document.getElementById('questions-container').innerHTML = '';
 }

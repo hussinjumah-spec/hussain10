@@ -249,7 +249,7 @@
             <span>النماذج</span>
             <span class="nav-badge" id="forms-count">0</span>
           </a>
-          <a class="nav-item" onclick="showSection('create-form')" href="#">
+          <a class="nav-item" onclick="initNewForm(); showSection('create-form')" href="#">
             <i class="fas fa-plus-circle"></i>
             <span>نموذج جديد</span>
           </a>
@@ -401,7 +401,7 @@
               <h2 class="section-title">النماذج</h2>
               <p class="section-desc">إدارة جميع النماذج والاستبيانات</p>
             </div>
-            <button class="btn btn-primary" onclick="showSection('create-form')">
+            <button class="btn btn-primary" onclick="initNewForm(); showSection('create-form')">
               <i class="fas fa-plus"></i> نموذج جديد
             </button>
           </div>
@@ -421,7 +421,7 @@
               <div class="empty-icon"><i class="fas fa-file-circle-plus"></i></div>
               <h3>لا توجد نماذج</h3>
               <p>ابدأ بإنشاء نموذجك الأول الآن</p>
-              <button class="btn btn-primary" onclick="showSection('create-form')">
+              <button class="btn btn-primary" onclick="initNewForm(); showSection('create-form')">
                 <i class="fas fa-plus"></i> إنشاء نموذج
               </button>
             </div>
@@ -461,7 +461,12 @@
                 </div>
                 <div class="form-group">
                   <label>وصف النموذج</label>
-                  <textarea id="form-description" class="form-control" rows="3" placeholder="وصف اختياري للنموذج"></textarea>
+                  <textarea id="form-description" class="form-control" rows="2" placeholder="وصف اختياري للنموذج"></textarea>
+                </div>
+                <div class="form-group">
+                  <label><i class="fab fa-google"></i> رابط ربط Google Sheets (Apps Script)</label>
+                  <input type="url" id="form-webhook" class="form-control" placeholder="https://script.google.com/macros/s/.../exec">
+                  <p class="help-text" style="font-size:.7rem;margin-top:.3rem;color:var(--text-muted)">سيتم إرسال الإجابات تلقائياً لهذا الرابط عند كل إرسال جديد.</p>
                 </div>
                 <div class="form-options-row">
                   <div class="form-option">
@@ -651,6 +656,41 @@
                   <span>فاتح</span>
                 </div>
               </div>
+            </div>
+          </div>
+          <div class="settings-card">
+            <h3><i class="fas fa-cloud"></i> التزامن السحابي (Cloud Sync)</h3>
+            <p style="font-size:.8rem;color:var(--text-muted);margin-bottom:1rem">اربط كل أجهزتك معاً باستخدام رابط مزامنة واحد من Google Sheets.</p>
+            <div class="form-group">
+              <label>رابط التزامن العالمي</label>
+              <input type="url" id="global-sync-url" class="form-control" placeholder="https://script.google.com/macros/s/.../exec">
+            </div>
+            <div style="display:flex;gap:1.5rem;margin:1rem 0">
+              <label class="checkbox-label">
+                <input type="checkbox" id="auto-sync" checked>
+                <span>تزامن تلقائي عند الفتح</span>
+              </label>
+            </div>
+            <div style="display:flex;gap:1rem">
+              <button class="btn btn-primary" id="btn-push-cloud" onclick="pushToCloud()">
+                <i class="fas fa-upload"></i> رفع للسحاب
+              </button>
+              <button class="btn btn-ghost" id="btn-pull-cloud" onclick="pullFromCloud()">
+                <i class="fas fa-download"></i> سحب من السحاب
+              </button>
+            </div>
+          </div>
+          <div class="settings-card">
+            <h3><i class="fas fa-database"></i> إدارة البيانات والنسخ الاحتياطي</h3>
+            <p style="font-size:.8rem;color:var(--text-muted);margin-bottom:1rem">تصدير واستيراد قاعدة البيانات بالكامل للتنقل بين الأجهزة.</p>
+            <div style="display:flex;gap:1rem;flex-wrap:wrap">
+              <button class="btn btn-primary" onclick="exportDatabase()">
+                <i class="fas fa-file-export"></i> تصدير (JSON)
+              </button>
+              <button class="btn btn-ghost" onclick="document.getElementById('import-db-input').click()">
+                <i class="fas fa-file-import"></i> استيراد
+              </button>
+              <input type="file" id="import-db-input" hidden accept=".json" onchange="importDatabase(event)">
             </div>
           </div>
         </section>

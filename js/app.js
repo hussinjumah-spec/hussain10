@@ -15,18 +15,15 @@ function showPage(pageId) {
 
 // -------- SECTION NAVIGATION --------
 function showSection(sectionId) {
-  // Deactivate all sections & nav items
   document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
   document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
 
   const section = document.getElementById(`section-${sectionId}`);
   if (section) section.classList.add('active');
 
-  // Activate matching nav item
   const navItem = document.querySelector(`.nav-item[onclick*="'${sectionId}'"]`);
   if (navItem) navItem.classList.add('active');
 
-  // Update breadcrumb
   const titles = {
     overview: 'نظرة عامة', forms: 'النماذج', 'create-form': 'نموذج جديد',
     responses: 'الإجابات', analytics: 'التحليلات', settings: 'الإعدادات'
@@ -34,12 +31,8 @@ function showSection(sectionId) {
   const bc = document.getElementById('breadcrumb');
   if (bc) bc.innerHTML = `<i class="fas fa-home"></i><span>${titles[sectionId] || sectionId}</span>`;
 
-  // Lazy load data per section
   if (sectionId === 'overview') renderOverview();
   else if (sectionId === 'forms') renderForms();
-  else if (sectionId === 'create-form') {
-    if (!editingFormId) initNewForm();
-  }
   else if (sectionId === 'responses') renderResponses();
   else if (sectionId === 'analytics') renderAnalytics();
   else if (sectionId === 'settings') loadSettings();
@@ -50,7 +43,6 @@ function initDashboard() {
   updateUserUI();
   updateBadgeCounts();
   renderOverview();
-  // Auto activate overview
   document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
   document.getElementById('section-overview')?.classList.add('active');
   document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
@@ -74,13 +66,10 @@ function updateUserUI() {
 function updateBadgeCounts() {
   const forms = DB.getForms();
   const responses = DB.getResponses();
-
   const fCount = document.getElementById('forms-count');
   const rCount = document.getElementById('responses-count');
   if (fCount) fCount.textContent = forms.length;
   if (rCount) rCount.textContent = responses.length;
-
-  // Stats overview
   document.getElementById('total-forms')?.setAttribute('data-count', forms.length);
   document.getElementById('total-responses')?.setAttribute('data-count', responses.length);
 }
@@ -89,14 +78,11 @@ function updateBadgeCounts() {
 function renderOverview() {
   const forms = DB.getForms();
   const responses = DB.getResponses();
-
-  // Animate counters
   animateCounter('total-forms', forms.length);
   animateCounter('total-responses', responses.length);
   animateCounter('active-forms', forms.filter(f => f.active).length);
   animateCounter('total-users', [...new Set(responses.map(r => r.respondentName))].length);
 
-  // Recent forms
   const recentFormsEl = document.getElementById('recent-forms-list');
   const recentForms = [...forms].reverse().slice(0, 4);
   if (recentForms.length === 0) {
@@ -113,7 +99,6 @@ function renderOverview() {
       </div>`).join('');
   }
 
-  // Recent responses
   const recentRespEl = document.getElementById('recent-responses-list');
   const recentResp = [...responses].sort((a, b) => new Date(b.submittedAt) - new Date(a.submittedAt)).slice(0, 4);
   if (recentResp.length === 0) {
@@ -138,7 +123,7 @@ function renderOverview() {
 function animateCounter(id, target) {
   const el = document.getElementById(id);
   if (!el) return;
-  const start = 0;
+  let start = null;
   const duration = 800;
   const step = (timestamp) => {
     if (!start) start = timestamp;
@@ -159,31 +144,110 @@ function loadSettings() {
   const av = document.getElementById('settings-avatar');
   if (av) av.textContent = u.name?.charAt(0) || 'م';
 
-  // Highlight current theme
   const theme = localStorage.getItem('formflow_theme') || 'dark';
   document.querySelectorAll('.theme-option').forEach(o => o.classList.remove('active'));
   const activeBtn = document.querySelector(`.theme-option[onclick*="'${theme}'"]`);
   if (activeBtn) activeBtn.classList.add('active');
+
+  const syncUrl = localStorage.getItem('formflow_sync_url') || '';
+  const autoSync = localStorage.getItem('formflow_auto_sync') !== 'false';
+  const urlEl = document.getElementById('global-sync-url');
+  const autoEl = document.getElementById('auto-sync');
+  if (urlEl) urlEl.value = syncUrl;
+  if (autoEl) autoEl.checked = autoSync;
 }
 
 function setTheme(theme) {
   document.documentElement.setAttribute('data-theme', theme);
   localStorage.setItem('formflow_theme', theme);
-
-  // Update selection UI if on the settings page
   document.querySelectorAll('.theme-option').forEach(o => o.classList.remove('active'));
   const activeBtn = document.querySelector(`.theme-option[onclick*="'${theme}'"]`);
   if (activeBtn) activeBtn.classList.add('active');
-
   showToast(theme === 'dark' ? 'الوضع الداكن مفعّل' : 'الوضع الفاتح مفعّل', 'info');
 }
 
-// -------- SIDEBAR --------
+// -------- CLOUD SYNC LOGIC --------
+async function pushToCloud() {
+  const url = document.getElementById('global-sync-url').value.trim();
+  if (!url) { showToast('يرجى إدخال رابط المزامنة أولاً', 'error'); return; }
+  localStorage.setItem('formflow_sync_url', url);
+  localStorage.setItem('formflow_auto_sync', document.getElementById('auto-sync').checked);
+
+  const btn = document.getElementById('btn-push-cloud');
+  const oldText = btn.innerHTML;
+  btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> جاري الرفع...';
+  btn.disabled = true;
+
+  try {
+    const data = {};
+    for (let i = 0; i < localStorage.length; i++) {
+      const key = localStorage.key(i);
+      if (key && key.startsWith('formflow_') && !key.includes('sync_url')) {
+        data[key] = localStorage.getItem(key);
+      }
+    }
+    await fetch(url, { method: 'POST', mode: 'no-cors', body: JSON.stringify(data) });
+    showToast('تم رفع البيانات للسحاب بنجاح!', 'success');
+  } catch (err) {
+    showToast('فشل الرفع للسحاب، تأكد من الرابط', 'error');
+  } finally {
+    btn.innerHTML = oldText;
+    btn.disabled = false;
+  }
+}
+
+async function pullFromCloud() {
+  const url = document.getElementById('global-sync-url').value.trim();
+  if (!url) { showToast('يرجى إدخال رابط المزامنة أولاً', 'error'); return; }
+  const btn = document.getElementById('btn-pull-cloud');
+  const oldText = btn.innerHTML;
+  btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> جاري السحب...';
+  btn.disabled = true;
+
+  try {
+    const resp = await fetch(url);
+    const data = await resp.json();
+    if (data && typeof data === 'object' && Object.keys(data).length > 0) {
+      if (confirm('هل أنت متأكد من سحب البيانات؟ سيتم استبدال البيانات المحلية ببيانات السحاب.')) {
+        for (const key in data) {
+          if (key.startsWith('formflow_')) localStorage.setItem(key, data[key]);
+        }
+        showToast('تمت المزامنة بنجاح! جاري التحديث...', 'success');
+        setTimeout(() => location.reload(), 1000);
+      }
+    } else {
+      showToast('لم يتم العثور على بيانات في السحاب', 'warning');
+    }
+  } catch (err) {
+    showToast('فشل سحب البيانات، تأكد من الرابط', 'error');
+  } finally {
+    btn.innerHTML = oldText;
+    btn.disabled = false;
+  }
+}
+
+async function pullFromCloudAuto() {
+  const url = localStorage.getItem('formflow_sync_url');
+  if (!url) return;
+  try {
+    const resp = await fetch(url);
+    const data = await resp.json();
+    if (data && typeof data === 'object' && Object.keys(data).length > 0) {
+      for (const key in data) {
+        if (key.startsWith('formflow_')) localStorage.setItem(key, data[key]);
+      }
+      console.log('Auto-sync successful');
+    }
+  } catch (e) {
+    console.warn('Auto-sync failed');
+  }
+}
+
+// -------- SIDEBAR & UI --------
 function toggleSidebar() {
   document.getElementById('sidebar')?.classList.toggle('open');
 }
 
-// -------- MODAL --------
 function openModal(title, body, footer = '') {
   document.getElementById('modal-title').textContent = title;
   document.getElementById('modal-body').innerHTML = body;
@@ -195,7 +259,6 @@ function closeModal() {
   document.getElementById('modal-overlay').classList.remove('show');
 }
 
-// -------- TOAST --------
 function showToast(message, type = 'info') {
   const icons = { success: 'fa-check-circle', error: 'fa-times-circle', warning: 'fa-exclamation-triangle', info: 'fa-info-circle' };
   const container = document.getElementById('toast-container');
@@ -209,14 +272,13 @@ function showToast(message, type = 'info') {
   }, 3500);
 }
 
-// -------- NOTIFICATIONS --------
 function showNotifications() {
   openModal('الإشعارات', `
     <div style="display:flex;flex-direction:column;gap:.75rem">
       <div style="padding:1rem;background:var(--dark-3);border-radius:.75rem;display:flex;gap:.75rem;align-items:flex-start">
         <i class="fas fa-bell" style="color:var(--primary);margin-top:.15rem"></i>
         <div>
-          <div style="font-weight:600;font-size:.9rem">مرحباً بك في FormFlow</div>
+          <div style="font-weight:600;font-size:.9rem">مرحبلاً بك في FormFlow</div>
           <div style="font-size:.8rem;color:var(--text-muted)">ابدأ بإنشاء نموذجك الأول</div>
         </div>
       </div>
@@ -225,12 +287,10 @@ function showNotifications() {
   );
 }
 
-// -------- MISC --------
 function scrollToFeatures() {
   document.getElementById('features')?.scrollIntoView({ behavior: 'smooth' });
 }
 
-// -------- URL FORM LOADING --------
 function checkURLForm() {
   const params = new URLSearchParams(window.location.search);
   const slug = params.get('form');
@@ -245,7 +305,6 @@ function checkURLForm() {
   }
 }
 
-// -------- ANALYTICS EXTRA CSS --------
 const analyticsStyle = document.createElement('style');
 analyticsStyle.textContent = `
   .bar-chart { display:flex; align-items:flex-end; gap:.75rem; height:200px; padding:.5rem 0; }
@@ -258,11 +317,9 @@ document.head.appendChild(analyticsStyle);
 
 // ==================== INIT ====================
 document.addEventListener('DOMContentLoaded', () => {
-  // Load Theme
   const savedTheme = localStorage.getItem('formflow_theme') || 'dark';
   document.documentElement.setAttribute('data-theme', savedTheme);
 
-  // Check if already logged in
   if (Auth.init()) {
     if (Auth.isAdmin()) {
       initDashboard();
@@ -274,10 +331,11 @@ document.addEventListener('DOMContentLoaded', () => {
     showPage('login-page');
   }
 
-  // Check URL for form
   checkURLForm();
 
-  // Toggle active-label for form toggle
+  const autoSync = localStorage.getItem('formflow_auto_sync') !== 'false';
+  if (autoSync) pullFromCloudAuto();
+
   const formActiveToggle = document.getElementById('form-active');
   if (formActiveToggle) {
     formActiveToggle.addEventListener('change', () => {
@@ -285,7 +343,6 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
-  // Close sidebar on outside click (mobile)
   document.addEventListener('click', (e) => {
     const sidebar = document.getElementById('sidebar');
     const menuBtn = document.querySelector('.mobile-menu-btn');
@@ -294,3 +351,47 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   });
 });
+
+// -------- DATA MANAGEMENT (BACKUP/RESTORE) --------
+function exportDatabase() {
+  const data = {};
+  for (let i = 0; i < localStorage.length; i++) {
+    const key = localStorage.key(i);
+    if (key && key.startsWith('formflow_')) {
+      data[key] = localStorage.getItem(key);
+    }
+  }
+  const blob = new Blob([JSON.stringify(data)], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `formflow_backup_${new Date().toISOString().split('T')[0]}.json`;
+  a.click();
+  showToast('تم تصدير النسخة الاحتياطية بنجاح', 'success');
+}
+
+function importDatabase(event) {
+  const file = event.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = e => {
+    try {
+      const data = JSON.parse(e.target.result);
+      if (!data || typeof data !== 'object') throw new Error();
+      if (confirm('تنبيه: سيتم استبدال جميع البيانات الحالية بالبيانات المستوردة. هل تريد الاستمرار؟')) {
+        for (let i = localStorage.length - 1; i >= 0; i--) {
+          const key = localStorage.key(i);
+          if (key && key.startsWith('formflow_')) localStorage.removeItem(key);
+        }
+        for (const key in data) {
+          localStorage.setItem(key, data[key]);
+        }
+        showToast('تم استيراد البيانات بنجاح! سيتم إعادة تحميل الصفحة...', 'success');
+        setTimeout(() => location.reload(), 1500);
+      }
+    } catch (err) {
+      showToast('خطأ في قراءة ملف النسخة الاحتياطية', 'error');
+    }
+  };
+  reader.readAsText(file);
+}

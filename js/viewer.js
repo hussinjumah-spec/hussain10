@@ -246,7 +246,49 @@ function submitForm() {
   };
 
   DB.addResponse(response);
+  if (viewerForm.webhookUrl) {
+    sendToGoogleSheets(response, viewerForm);
+  }
   showResultPage(response, viewerForm);
+}
+
+function sendToGoogleSheets(response, form) {
+  // Prepare data for Google Sheets
+  const sheetData = {
+    respondentName: response.respondentName,
+    respondentPhone: response.respondentPhone,
+    formTitle: form.title,
+    scoreText: response.totalPoints > 0 ? `${response.score}/${response.totalPoints}` : '-',
+    submittedAt: new Date(response.submittedAt).toLocaleString('ar-SA'),
+    details: {}
+  };
+
+  // Add question-answer pairs
+  form.questions.forEach(q => {
+    let ans = response.answers[q.id];
+    if (q.type === 'multiple-choice' || q.type === 'true-false') {
+      ans = q.options.find(o => o.id === ans)?.text || '-';
+    }
+    sheetData.details[q.text] = ans || '-';
+  });
+
+  // Flat version for simpler sheet scripts
+  const flatData = {
+    'الاسم': sheetData.respondentName,
+    'الهاتف': sheetData.respondentPhone,
+    'النموذج': sheetData.formTitle,
+    'النتيجة': sheetData.scoreText,
+    'التاريخ': sheetData.submittedAt,
+    ...sheetData.details
+  };
+
+  fetch(form.webhookUrl, {
+    method: 'POST',
+    mode: 'no-cors', // IMPORTANT: Google Apps Script usually needs this or CORS config
+    cache: 'no-cache',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(flatData)
+  }).catch(e => console.error('Error sending to Google Sheets:', e));
 }
 
 function showResultPage(response, form) {

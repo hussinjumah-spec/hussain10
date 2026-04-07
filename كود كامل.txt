@@ -1,0 +1,16 @@
+var SHEET_NAME = "Cloud_Database";
+
+function doPost(e) {
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var sheet = ss.getSheetByName(SHEET_NAME) || ss.insertSheet(SHEET_NAME);
+  var data = e.postData.contents;
+  sheet.getRange(1, 1).setValue(data);
+  return ContentService.createTextOutput("Success").setMimeType(ContentService.MimeType.TEXT);
+}
+
+function doGet() {
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var sheet = ss.getSheetByName(SHEET_NAME);
+  var data = sheet ? sheet.getRange(1, 1).getValue() : "{}";
+  return ContentService.createTextOutput(data).setMimeType(ContentService.MimeType.JSON);
+}
