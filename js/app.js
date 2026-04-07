@@ -167,6 +167,13 @@ function setTheme(theme) {
 }
 
 // -------- CLOUD SYNC LOGIC --------
+function saveSyncUrl() {
+  const url = document.getElementById('global-sync-url').value.trim();
+  const auto = document.getElementById('auto-sync').checked;
+  localStorage.setItem('formflow_sync_url', url);
+  localStorage.setItem('formflow_auto_sync', auto);
+}
+
 async function pushToCloudAuto() {
   const url = localStorage.getItem('formflow_sync_url');
   const autoSync = localStorage.getItem('formflow_auto_sync') !== 'false';

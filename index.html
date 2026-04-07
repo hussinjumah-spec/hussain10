@@ -663,11 +663,11 @@
             <p style="font-size:.8rem;color:var(--text-muted);margin-bottom:1rem">اربط كل أجهزتك معاً باستخدام رابط مزامنة واحد من Google Sheets.</p>
             <div class="form-group">
               <label>رابط التزامن العالمي</label>
-              <input type="url" id="global-sync-url" class="form-control" placeholder="https://script.google.com/macros/s/.../exec">
+              <input type="url" id="global-sync-url" class="form-control" onchange="saveSyncUrl()" placeholder="https://script.google.com/macros/s/.../exec">
             </div>
             <div style="display:flex;gap:1.5rem;margin:1rem 0">
               <label class="checkbox-label">
-                <input type="checkbox" id="auto-sync" checked>
+                <input type="checkbox" id="auto-sync" onchange="saveSyncUrl()" checked>
                 <span>تزامن تلقائي عند الفتح</span>
               </label>
             </div>
