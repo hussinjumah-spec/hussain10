@@ -190,8 +190,8 @@
           <!-- Login Form -->
           <div id="login-form" class="auth-form">
             <div class="form-group">
-              <label><i class="fas fa-envelope"></i> البريد الإلكتروني</label>
-              <input type="email" id="login-email" placeholder="example@email.com" class="form-control">
+              <label><i class="fas fa-user"></i> الاسم</label>
+              <input type="text" id="login-email" placeholder="أدخل اسمك..." class="form-control">
             </div>
             <div class="form-group">
               <label><i class="fas fa-lock"></i> كلمة المرور</label>
@@ -204,31 +204,17 @@
             </div>
             <div class="form-options">
               <label class="checkbox-label">
-                <input type="checkbox" id="remember-me">
-                <span>تذكرني</span>
+                <input type="checkbox" id="remember-me" checked>
+                <span>ذكرني</span>
               </label>
-              <a href="#" class="forgot-link">نسيت كلمة المرور؟</a>
             </div>
             <button class="btn btn-primary full-width" onclick="handleLogin()">
               <span class="btn-text">تسجيل الدخول</span>
               <i class="fas fa-arrow-left"></i>
             </button>
-            <div class="auth-divider"><span>أو</span></div>
-            <div class="demo-accounts">
-              <p class="demo-title">حسابات تجريبية:</p>
-              <button class="demo-btn" onclick="fillDemo('admin')">
-                <i class="fas fa-user-shield"></i> مدير
-              </button>
-              <button class="demo-btn" onclick="fillDemo('user')">
-                <i class="fas fa-user"></i> مستخدم
-              </button>
-            </div>
           </div>
-
         </div>
-        <button class="back-home" style="display:none" onclick="showPage('login-page')">
-          <i class="fas fa-home"></i> العودة للرئيسية
-        </button>
+      </div>
       </div>
     </div>
   </div>
@@ -500,6 +486,14 @@
                       <span class="toggle-label" id="form-active-label">نشط</span>
                     </label>
                   </div>
+                  <div class="form-option">
+                    <label>عرض النتيجة</label>
+                    <label class="toggle-switch">
+                      <input type="checkbox" id="form-show-score" checked>
+                      <span class="toggle-slider"></span>
+                      <span class="toggle-label">مفعّل</span>
+                    </label>
+                  </div>
                 </div>
               </div>
             </div>
@@ -726,14 +720,6 @@
           <h2 id="result-title">شكراً لك!</h2>
           <p id="result-message">تم إرسال إجاباتك بنجاح</p>
           <div id="result-details" class="result-details"></div>
-        </div>
-        <div class="result-actions">
-          <button class="btn btn-primary" onclick="retakeForm()">
-            <i class="fas fa-redo"></i> إعادة المحاولة
-          </button>
-          <button class="btn btn-ghost" onclick="showPage('login-page')">
-            <i class="fas fa-home"></i> الرئيسية
-          </button>
         </div>
       </div>
     </div>

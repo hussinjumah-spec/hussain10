@@ -52,7 +52,9 @@ function renderForms() {
         <div class="form-card-body">
           <div class="form-meta-row">
             <span class="meta-tag type"><i class="fas ${typeIcon}"></i> ${typeLabel}</span>
-            <span class="meta-tag count"><i class="fas fa-question-circle"></i> ${qCount} سؤال</span>
+            <span class="meta-tag count" onclick="editForm('${form.id}')" style="cursor:pointer" title="تعديل الأسئلة">
+              <i class="fas fa-question-circle"></i> ${qCount} سؤال
+            </span>
             <span class="meta-tag count"><i class="fas fa-users"></i> ${responses} إجابة</span>
             <span class="meta-tag ${statusClass}"><i class="fas ${statusIcon}"></i> ${statusLabel}</span>
           </div>
@@ -91,6 +93,7 @@ function saveForm() {
     type: document.getElementById('form-type').value,
     displayMode: document.getElementById('form-display-mode').value,
     active: document.getElementById('form-active').checked,
+    showScore: document.getElementById('form-show-score').checked,
     logo: formLogoData,
     questions: currentQuestions,
     updatedAt: new Date().toISOString()
@@ -132,6 +135,7 @@ function editForm(id) {
   document.getElementById('form-type').value = form.type || 'survey';
   document.getElementById('form-display-mode').value = form.displayMode || 'one-by-one';
   document.getElementById('form-active').checked = form.active !== false;
+  document.getElementById('form-show-score').checked = form.showScore !== false;
 
   const preview = document.getElementById('form-logo-preview');
   if (form.logo) preview.innerHTML = `<img src="${form.logo}" alt="logo">`;
@@ -177,12 +181,38 @@ function previewForm(id) {
 function copyFormLink(id) {
   const form = DB.getFormById(id);
   if (!form) return;
-  const link = `${window.location.href.split('?')[0]}?form=${form.slug}`;
-  navigator.clipboard.writeText(link).then(() => showToast('تم نسخ الرابط!', 'success')).catch(() => {
-    openModal('رابط النموذج', `<div class="form-group"><label>الرابط</label><input type="text" class="form-control" value="${link}" id="link-copy-input" readonly onclick="this.select()"></div>`,
-      '<button class="btn btn-primary" onclick="document.getElementById(\'link-copy-input\').select();document.execCommand(\'copy\');showToast(\'تم النسخ\',\'success\')">نسخ</button>'
-    );
-  });
+  const link = `${window.location.origin}${window.location.pathname}?form=${form.slug}`;
+  
+  const copyToClipboard = (text) => {
+    if (navigator.clipboard && window.isSecureContext) {
+      return navigator.clipboard.writeText(text);
+    } else {
+      const textArea = document.createElement("textarea");
+      textArea.value = text;
+      textArea.style.position = "fixed";
+      textArea.style.left = "-9999px";
+      textArea.style.top = "0";
+      document.body.appendChild(textArea);
+      textArea.focus();
+      textArea.select();
+      return new Promise((res, rej) => {
+        document.execCommand('copy') ? res() : rej();
+        textArea.remove();
+      });
+    }
+  };
+
+  copyToClipboard(link)
+    .then(() => showToast('تم نسخ الرابط بنجاح!', 'success'))
+    .catch(() => {
+      openModal('رابط النموذج', `
+        <div class="form-group">
+          <label>لم نتمكن من النسخ تلقائياً، يرجى نسخه يدوياً:</label>
+          <input type="text" class="form-control" value="${link}" readonly onclick="this.select()">
+        </div>`,
+        '<button class="btn btn-primary" onclick="closeModal()">موافق</button>'
+      );
+    });
 }
 
 function viewFormResponses(formId) {
@@ -199,7 +229,8 @@ function addQuestion(type) {
     text: '',
     required: false,
     points: type !== 'short-answer' && type !== 'paragraph' && type !== 'file-upload' ? 10 : 0,
-    options: []
+    options: [],
+    isCollapsed: false
   };
 
   if (type === 'multiple-choice') {
@@ -249,6 +280,10 @@ function buildQuestionCard(q, idx) {
     'file-upload': 'fa-upload'
   };
 
+  const typeOptions = Object.entries(typeNames).map(([val, label]) =>
+    `<option value="${val}" ${q.type === val ? 'selected' : ''}>${label}</option>`
+  ).join('');
+
   const formType = document.getElementById('form-type')?.value || 'survey';
   const showPoints = formType === 'quiz' && (q.type === 'multiple-choice' || q.type === 'true-false');
 
@@ -279,15 +314,24 @@ function buildQuestionCard(q, idx) {
     optionsHtml = `<div class="vq-file-upload" style="pointer-events:none;opacity:.5"><i class="fas fa-upload"></i><p>رفع ملف</p></div>`;
   }
 
+  const isCollapsed = q.isCollapsed === true;
+
   return `
-    <div class="question-card editor-card" id="qcard-${q.id}" draggable="true" data-qidx="${idx}">
+    <div class="question-card editor-card ${isCollapsed ? 'collapsed' : ''}" id="qcard-${q.id}" draggable="true" data-qidx="${idx}">
       <div class="question-drag-handle" ondragstart="dragStart(event,${idx})" ondragover="dragOver(event)" ondrop="dropQuestion(event,${idx})">
         <div style="display:flex;align-items:center;gap:.5rem">
           <i class="fas fa-grip-vertical drag-icon"></i>
-          <span class="question-type-badge"><i class="fas ${typeIcons[q.type]}"></i> ${typeNames[q.type]}</span>
+          <select class="form-control" style="width:auto;padding:.2rem .5rem;font-size:.75rem;height:28px"
+            onchange="changeQuestionType('${q.id}', this.value)">
+            ${typeOptions}
+          </select>
         </div>
         <div style="display:flex;align-items:center;gap:.5rem">
-          ${showPoints ? `<input type="number" class="form-control" style="width:70px;padding:.3rem .5rem;font-size:.8rem" value="${q.points}" min="0" oninput="updateQ('${q.id}','points',+this.value)" title="النقاط">` : ''}
+          ${showPoints ? `<input type="number" class="form-control" style="width:70px;padding:.3rem .5rem;font-size:.8rem;height:28px" value="${q.points}" min="0" oninput="updateQ('${q.id}','points',+this.value)" title="النقاط">` : ''}
+          <button class="icon-btn" title="${isCollapsed ? 'تعديل السؤال' : 'إغلاق التعديل'}" onclick="toggleQuestionCollapse('${q.id}')">
+            <i class="fas ${isCollapsed ? 'fa-edit' : 'fa-chevron-up'}"></i>
+          </button>
+          <button class="icon-btn" title="تكرار السؤال" onclick="duplicateQuestion('${q.id}')"><i class="fas fa-clone"></i></button>
           <button class="icon-btn danger" onclick="deleteQuestion('${q.id}')"><i class="fas fa-trash"></i></button>
         </div>
       </div>
@@ -295,12 +339,17 @@ function buildQuestionCard(q, idx) {
         <div class="q-header-row">
           <div class="q-number">${idx + 1}</div>
           <div class="q-inputs">
-            <input type="text" class="form-control" value="${q.text}" placeholder="نص السؤال..."
-              oninput="updateQ('${q.id}','text',this.value)">
-            ${optionsHtml}
+            <div class="q-text-view" onclick="toggleQuestionCollapse('${q.id}')">
+              ${q.text || '<span style="color:var(--text-muted)">سؤال بدون نص... انقر للتعديل</span>'}
+            </div>
+            <div class="q-edit-fields">
+              <input type="text" class="form-control" value="${q.text}" placeholder="نص السؤال..."
+                oninput="updateQ('${q.id}','text',this.value)">
+              ${optionsHtml}
+            </div>
           </div>
         </div>
-        <div class="question-actions">
+        <div class="question-actions q-edit-fields">
           <label class="q-required-toggle">
             <input type="checkbox" ${q.required ? 'checked' : ''} onchange="updateQ('${q.id}','required',this.checked)">
             <span>إلزامي</span>
@@ -308,6 +357,14 @@ function buildQuestionCard(q, idx) {
         </div>
       </div>
     </div>`;
+}
+
+function toggleQuestionCollapse(qId) {
+  const q = currentQuestions.find(q => q.id === qId);
+  if (q) {
+    q.isCollapsed = !q.isCollapsed;
+    renderQuestions();
+  }
 }
 
 function updateQ(qId, field, value) {
@@ -346,6 +403,43 @@ function deleteOption(qId, optId) {
 function deleteQuestion(qId) {
   currentQuestions = currentQuestions.filter(q => q.id !== qId);
   renderQuestions();
+}
+
+function duplicateQuestion(qId) {
+  const q = currentQuestions.find(q => q.id === qId);
+  if (!q) return;
+  const copy = JSON.parse(JSON.stringify(q));
+  copy.id = DB.generateId();
+  if (copy.options) copy.options.forEach(o => o.id = DB.generateId());
+  
+  const idx = currentQuestions.findIndex(q => q.id === qId);
+  currentQuestions.splice(idx + 1, 0, copy);
+  renderQuestions();
+  showToast('تم تكرار السؤال بنجاح', 'success');
+}
+
+function changeQuestionType(qId, newType) {
+  const q = currentQuestions.find(q => q.id === qId);
+  if (!q || q.type === newType) return;
+  
+  q.type = newType;
+  // Initialize options if switching to a multiple-choice type and none exist
+  if ((newType === 'multiple-choice' || newType === 'true-false') && (!q.options || q.options.length === 0)) {
+    if (newType === 'multiple-choice') {
+      q.options = [
+        { id: DB.generateId(), text: 'الخيار الأول', correct: false },
+        { id: DB.generateId(), text: 'الخيار الثاني', correct: false }
+      ];
+    } else {
+      q.options = [
+        { id: DB.generateId(), text: 'صح', correct: false },
+        { id: DB.generateId(), text: 'خطأ', correct: false }
+      ];
+    }
+  }
+  
+  renderQuestions();
+  showToast('تم تغيير نوع السؤال', 'info');
 }
 
 // -------- DRAG & DROP --------
@@ -403,6 +497,7 @@ function initNewForm() {
   document.getElementById('form-type').value = 'survey';
   document.getElementById('form-display-mode').value = 'one-by-one';
   document.getElementById('form-active').checked = true;
+  document.getElementById('form-show-score').checked = true;
   document.getElementById('form-logo-preview').innerHTML = '<i class="fas fa-image"></i><span>إضافة شعار</span>';
   document.getElementById('questions-container').innerHTML = '';
 }
@@ -436,7 +531,10 @@ function renderResponses(formId = 'all') {
     return `
       <tr>
         <td>${idx + 1}</td>
-        <td><strong>${r.respondentName || 'مجهول'}</strong></td>
+        <td>
+          <strong>${r.respondentName || 'مجهول'}</strong>
+          <div style="font-size:.75rem;color:var(--text-muted)">${r.respondentPhone || '-'}</div>
+        </td>
         <td>${form?.title || 'نموذج محذوف'}</td>
         <td>${scoreBadge}</td>
         <td style="color:var(--text-muted);font-size:.8rem">${date}</td>
@@ -460,7 +558,7 @@ function viewResponseDetail(respId) {
 
   let html = `<div style="display:flex;flex-direction:column;gap:1rem">`;
   html += `<div style="display:flex;justify-content:space-between;color:var(--text-muted);font-size:.85rem">
-    <span><i class="fas fa-user"></i> ${resp.respondentName || 'مجهول'}</span>
+    <span><i class="fas fa-user"></i> ${resp.respondentName || 'مجهول'} (${resp.respondentPhone || '-'})</span>
     <span><i class="fas fa-clock"></i> ${new Date(resp.submittedAt).toLocaleString('ar-SA')}</span>
   </div>`;
 
@@ -495,37 +593,89 @@ function viewResponseDetail(respId) {
 
 // -------- EXPORT --------
 function exportToCSV() {
-  const rows = [];
-  rows.push(['#', 'الاسم', 'النموذج', 'الإجابات', 'النتيجة', 'التاريخ']);
+  const filterId = document.getElementById('response-form-filter')?.value || 'all';
+  let responses = DB.getResponses();
+  let headers = ['#', 'الاسم', 'رقم الهاتف', 'النموذج', 'الإجابات', 'النتيجة', 'التاريخ'];
+  
+  if (filterId !== 'all') {
+    const form = DB.getFormById(filterId);
+    if (form) {
+      responses = responses.filter(r => r.formId === filterId);
+      headers = ['#', 'الاسم', 'رقم الهاتف', ...form.questions.map(q => q.text), 'النتيجة', 'التاريخ'];
+    }
+  }
 
-  DB.getResponses().forEach((r, i) => {
+  const rows = [headers];
+
+  responses.forEach((r, i) => {
     const form = DB.getFormById(r.formId);
-    const answers = Object.values(r.answers).join(' | ');
+    const date = new Date(r.submittedAt).toLocaleString('ar-SA');
     const score = r.totalPoints > 0 ? `${r.score}/${r.totalPoints}` : '-';
-    rows.push([i + 1, r.respondentName || 'مجهول', form?.title || '-', answers, score, new Date(r.submittedAt).toLocaleString('ar-SA')]);
+    
+    if (filterId !== 'all' && form) {
+      const qAnswers = form.questions.map(q => {
+        const ans = r.answers[q.id];
+        if (q.type === 'multiple-choice' || q.type === 'true-false') {
+          return q.options.find(o => o.id === ans)?.text || '-';
+        }
+        return ans || '-';
+      });
+      rows.push([i + 1, r.respondentName || 'مجهول', r.respondentPhone || '-', ...qAnswers, score, date]);
+    } else {
+      const allAnswers = Object.values(r.answers).join(' | ');
+      rows.push([i + 1, r.respondentName || 'مجهول', r.respondentPhone || '-', form?.title || '-', allAnswers, score, date]);
+    }
   });
 
   const csv = '\uFEFF' + rows.map(r => r.map(c => `"${c}"`).join(',')).join('\n');
   const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
-  a.href = url; a.download = 'formflow_responses.csv'; a.click();
+  a.href = url; a.download = `responses_${filterId}.csv`; a.click();
   showToast('تم تصدير CSV بنجاح', 'success');
 }
 
 function exportToExcel() {
   if (typeof XLSX === 'undefined') { showToast('جاري تحميل مكتبة Excel...', 'info'); return; }
-  const data = [['#', 'الاسم', 'النموذج', 'النتيجة', 'التاريخ']];
+  
+  const filterId = document.getElementById('response-form-filter')?.value || 'all';
+  let responses = DB.getResponses();
+  let headers = ['#', 'الاسم', 'رقم الهاتف', 'النموذج', 'النتيجة', 'التاريخ'];
+  let sheetName = 'All Responses';
 
-  DB.getResponses().forEach((r, i) => {
+  if (filterId !== 'all') {
+    const form = DB.getFormById(filterId);
+    if (form) {
+      responses = responses.filter(r => r.formId === filterId);
+      headers = ['#', 'الاسم', 'رقم الهاتف', ...form.questions.map(q => q.text), 'النتيجة', 'التاريخ'];
+      sheetName = form.title.substring(0, 30);
+    }
+  }
+
+  const data = [headers];
+
+  responses.forEach((r, i) => {
     const form = DB.getFormById(r.formId);
+    const date = new Date(r.submittedAt).toLocaleString('ar-SA');
     const score = r.totalPoints > 0 ? `${r.score}/${r.totalPoints}` : '-';
-    data.push([i + 1, r.respondentName || 'مجهول', form?.title || '-', score, new Date(r.submittedAt).toLocaleString('ar-SA')]);
+
+    if (filterId !== 'all' && form) {
+      const qAnswers = form.questions.map(q => {
+        const ans = r.answers[q.id];
+        if (q.type === 'multiple-choice' || q.type === 'true-false') {
+          return q.options.find(o => o.id === ans)?.text || '-';
+        }
+        return ans || '-';
+      });
+      data.push([i + 1, r.respondentName || 'مجهول', r.respondentPhone || '-', ...qAnswers, score, date]);
+    } else {
+      data.push([i + 1, r.respondentName || 'مجهول', r.respondentPhone || '-', form?.title || '-', score, date]);
+    }
   });
 
   const ws = XLSX.utils.aoa_to_sheet(data);
   const wb = XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(wb, ws, 'Responses');
-  XLSX.writeFile(wb, 'formflow_responses.xlsx');
+  XLSX.writeFile(wb, `responses_${filterId}.xlsx`);
   showToast('تم تصدير Excel بنجاح', 'success');
 }

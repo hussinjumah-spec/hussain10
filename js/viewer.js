@@ -52,7 +52,9 @@ function renderViewerQuestions() {
     <div class="viewer-question visible viewer-name-input" id="vq-name">
       <div class="vq-label"><i class="fas fa-user"></i> معلومات المشارك <span class="vq-required">*</span></div>
       <div class="vq-text">ما اسمك الكريم؟</div>
-      <input type="text" class="vq-input" id="respondent-name" placeholder="أدخل اسمك..." oninput="viewerAnswers['_name'] = this.value">
+      <input type="text" class="vq-input" id="respondent-name" placeholder="أدخل اسمك..." oninput="viewerAnswers['_name'] = this.value" style="margin-bottom:1.5rem">
+      <div class="vq-text">رقم الهاتف التواصل</div>
+      <input type="tel" class="vq-input" id="respondent-phone" placeholder="أدخل رقم الهاتف..." oninput="viewerAnswers['_phone'] = this.value">
     </div>
     ${questions.map((q, idx) => buildViewerQuestion(q, idx)).join('')}
   `;
@@ -192,7 +194,10 @@ function submitForm() {
   if (!viewerForm) return;
 
   const name = document.getElementById('respondent-name')?.value?.trim();
+  const phone = document.getElementById('respondent-phone')?.value?.trim();
+  
   if (!name) { showToast('يرجى إدخال اسمك أولاً', 'error'); showQuestion(0); return; }
+  if (!phone) { showToast('يرجى إدخال رقم الهاتف', 'error'); showQuestion(0); return; }
 
   // Validate required
   for (const q of viewerForm.questions) {
@@ -233,6 +238,7 @@ function submitForm() {
     id: DB.generateId(),
     formId: viewerForm.id,
     respondentName: name,
+    respondentPhone: phone,
     answers: { ...viewerAnswers },
     score,
     totalPoints,
@@ -246,8 +252,9 @@ function submitForm() {
 function showResultPage(response, form) {
   showPage('result-page');
 
-  const isQuiz = form.type === 'quiz' && response.totalPoints > 0;
-  const pct = isQuiz ? Math.round((response.score / response.totalPoints) * 100) : 100;
+  const isQuiz = form.type === 'quiz';
+  const totalPoints = response.totalPoints || 0;
+  const pct = totalPoints > 0 ? Math.round((response.score / totalPoints) * 100) : 0;
 
   const titleEl = document.getElementById('result-title');
   const msgEl = document.getElementById('result-message');
@@ -255,18 +262,21 @@ function showResultPage(response, form) {
   const detailsEl = document.getElementById('result-details');
   const circleEl = document.getElementById('result-progress-circle');
 
-  titleEl.textContent = isQuiz
+  // Logic: Only show score if it's a quiz AND showScore setting is NOT explicitly false
+  const showScore = isQuiz && (form.showScore !== false);
+  
+  titleEl.textContent = showScore
     ? (pct >= 70 ? 'أحسنت! نتيجة ممتازة 🎉' : pct >= 50 ? 'جيد! يمكنك التحسين 💪' : 'حاول مرة أخرى 📚')
     : 'شكراً لمشاركتك! 🎉';
 
-  msgEl.textContent = isQuiz
+  msgEl.textContent = showScore
     ? `حصلت على ${response.score} من ${response.totalPoints} نقطة`
     : 'تم إرسال إجاباتك بنجاح';
 
-  scoreEl.textContent = isQuiz ? pct + '%' : '✓';
+  scoreEl.textContent = showScore ? pct + '%' : '✓';
 
   // Animate circle
-  if (isQuiz) {
+  if (showScore) {
     const circumference = 283;
     const offset = circumference - (pct / 100) * circumference;
     setTimeout(() => {
@@ -276,7 +286,10 @@ function showResultPage(response, form) {
       }
     }, 300);
   } else {
-    if (circleEl) { circleEl.style.strokeDashoffset = 0; }
+    if (circleEl) { 
+      circleEl.style.strokeDashoffset = 0; 
+      circleEl.style.stroke = 'var(--primary)';
+    }
   }
 
   const date = new Date(response.submittedAt).toLocaleString('ar-SA');
@@ -286,12 +299,16 @@ function showResultPage(response, form) {
       <span class="result-detail-value">${response.respondentName}</span>
     </div>
     <div class="result-detail-row">
+      <span class="result-detail-label">رقم الهاتف</span>
+      <span class="result-detail-value">${response.respondentPhone || '-'}</span>
+    </div>
+    <div class="result-detail-row">
       <span class="result-detail-label">النموذج</span>
       <span class="result-detail-value">${form.title}</span>
     </div>
-    ${isQuiz ? `<div class="result-detail-row">
+    ${showScore ? `<div class="result-detail-row">
       <span class="result-detail-label">النتيجة</span>
-      <span class="result-detail-value" style="color:${pct >= 70 ? 'var(--success)' : pct >= 50 ? 'var(--warning)' : 'var(--danger)'}">${response.score}/${response.totalPoints}</span>
+      <span class="result-detail-value" style="color:${pct >= 70 ? 'var(--success)' : pct >= 50 ? 'var(--warning)' : 'var(--danger)'}">${response.score}/${totalPoints}</span>
     </div>` : ''}
     <div class="result-detail-row">
       <span class="result-detail-label">وقت الإرسال</span>
@@ -313,6 +330,7 @@ function retakeForm() {
   document.querySelectorAll('.vq-option').forEach(o => o.classList.remove('selected'));
   document.querySelectorAll('.vq-input').forEach(i => i.value = '');
   document.getElementById('respondent-name').value = '';
+  document.getElementById('respondent-phone').value = '';
 
   if (viewerMode === 'one-by-one') showQuestion(0);
   showPage('form-viewer');

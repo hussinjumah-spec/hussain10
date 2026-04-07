@@ -25,6 +25,7 @@ const DB = {
   saveUsers(u)        { this.set('users', u); },
   getUserById(id)     { return this.getUsers().find(u => u.id === id) || null; },
   getUserByEmail(em)  { return this.getUsers().find(u => u.email === em) || null; },
+  getUserByName(name) { return this.getUsers().find(u => u.name === name) || null; },
 
   addUser(user) {
     const users = this.getUsers();
@@ -90,23 +91,25 @@ const DB = {
 
   // ---- SEED DEFAULT ADMIN ----
   seed() {
-    if (this.getUsers().length === 0) {
+    const users = this.getUsers();
+    let admin = users.find(u => u.role === 'admin');
+    
+    if (!admin) {
       this.addUser({
         id: 'admin-001',
         name: 'المدير',
-        email: 'admin@formflow.com',
-        password: 'admin123',
+        email: 'admin',
+        password: 'admin',
         role: 'admin',
         createdAt: new Date().toISOString()
       });
-      this.addUser({
-        id: 'user-001',
-        name: 'مستخدم تجريبي',
-        email: 'user@formflow.com',
-        password: 'user123',
-        role: 'user',
-        createdAt: new Date().toISOString()
-      });
+    } else {
+      // Force password update for demo convenience
+      if (admin.name === 'المدير' || admin.email === 'admin') {
+        admin.password = 'admin';
+        admin.name = 'المدير'; // ensure name is consistent
+        this.saveUsers(users);
+      }
     }
 
     if (this.getForms().length === 0) {

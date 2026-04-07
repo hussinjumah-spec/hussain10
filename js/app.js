@@ -37,7 +37,9 @@ function showSection(sectionId) {
   // Lazy load data per section
   if (sectionId === 'overview') renderOverview();
   else if (sectionId === 'forms') renderForms();
-  else if (sectionId === 'create-form') initNewForm();
+  else if (sectionId === 'create-form') {
+    if (!editingFormId) initNewForm();
+  }
   else if (sectionId === 'responses') renderResponses();
   else if (sectionId === 'analytics') renderAnalytics();
   else if (sectionId === 'settings') loadSettings();
@@ -156,13 +158,24 @@ function loadSettings() {
   document.getElementById('settings-email').value = u.email || '';
   const av = document.getElementById('settings-avatar');
   if (av) av.textContent = u.name?.charAt(0) || 'م';
+
+  // Highlight current theme
+  const theme = localStorage.getItem('formflow_theme') || 'dark';
+  document.querySelectorAll('.theme-option').forEach(o => o.classList.remove('active'));
+  const activeBtn = document.querySelector(`.theme-option[onclick*="'${theme}'"]`);
+  if (activeBtn) activeBtn.classList.add('active');
 }
 
 function setTheme(theme) {
+  document.documentElement.setAttribute('data-theme', theme);
+  localStorage.setItem('formflow_theme', theme);
+
+  // Update selection UI if on the settings page
   document.querySelectorAll('.theme-option').forEach(o => o.classList.remove('active'));
-  event.currentTarget.classList.add('active');
-  // Current theme is always dark (future enhancement)
-  showToast(theme === 'dark' ? 'الوضع الداكن مفعّل' : 'سيتم إضافة الوضع الفاتح قريباً', 'info');
+  const activeBtn = document.querySelector(`.theme-option[onclick*="'${theme}'"]`);
+  if (activeBtn) activeBtn.classList.add('active');
+
+  showToast(theme === 'dark' ? 'الوضع الداكن مفعّل' : 'الوضع الفاتح مفعّل', 'info');
 }
 
 // -------- SIDEBAR --------
@@ -245,6 +258,10 @@ document.head.appendChild(analyticsStyle);
 
 // ==================== INIT ====================
 document.addEventListener('DOMContentLoaded', () => {
+  // Load Theme
+  const savedTheme = localStorage.getItem('formflow_theme') || 'dark';
+  document.documentElement.setAttribute('data-theme', savedTheme);
+
   // Check if already logged in
   if (Auth.init()) {
     if (Auth.isAdmin()) {

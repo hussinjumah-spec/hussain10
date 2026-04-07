@@ -14,9 +14,10 @@ const Auth = {
     return false;
   },
 
-  login(email, password) {
-    const user = DB.getUserByEmail(email.trim().toLowerCase());
-    if (!user) return { success: false, message: 'البريد الإلكتروني غير مسجل' };
+  login(input, password) {
+    // Try by name first, if not then by email
+    const user = DB.getUserByName(input.trim()) || DB.getUserByEmail(input.trim().toLowerCase());
+    if (!user) return { success: false, message: 'الاسم أو البريد غير مسجل' };
     if (user.password !== password) return { success: false, message: 'كلمة المرور غير صحيحة' };
     this.currentUser = user;
     DB.setSession({ userId: user.id, loginAt: new Date().toISOString() });
