@@ -249,6 +249,7 @@ function submitForm() {
   if (viewerForm.webhookUrl) {
     sendToGoogleSheets(response, viewerForm);
   }
+  if (typeof pushToCloudAuto === 'function') pushToCloudAuto();
   showResultPage(response, viewerForm);
 }
 

@@ -167,6 +167,24 @@ function setTheme(theme) {
 }
 
 // -------- CLOUD SYNC LOGIC --------
+async function pushToCloudAuto() {
+  const url = localStorage.getItem('formflow_sync_url');
+  const autoSync = localStorage.getItem('formflow_auto_sync') !== 'false';
+  if (!url || !autoSync) return;
+
+  try {
+    const data = {};
+    for (let i = 0; i < localStorage.length; i++) {
+      const key = localStorage.key(i);
+      if (key && key.startsWith('formflow_') && !key.includes('sync_url')) {
+        data[key] = localStorage.getItem(key);
+      }
+    }
+    await fetch(url, { method: 'POST', mode: 'no-cors', body: JSON.stringify(data) });
+    console.log('Auto-push successful');
+  } catch (e) { console.warn('Auto-push failed'); }
+}
+
 async function pushToCloud() {
   const url = document.getElementById('global-sync-url').value.trim();
   if (!url) { showToast('يرجى إدخال رابط المزامنة أولاً', 'error'); return; }

@@ -114,6 +114,8 @@ function saveForm() {
     DB.addForm(newForm);
     showToast('تم إنشاء النموذج بنجاح!', 'success');
   }
+  
+  if (typeof pushToCloudAuto === 'function') pushToCloudAuto();
 
   editingFormId = null;
   currentQuestions = [];
@@ -161,6 +163,7 @@ function confirmDeleteForm(id) {
   renderForms();
   updateBadgeCounts();
   renderOverview();
+  if (typeof pushToCloudAuto === 'function') pushToCloudAuto();
 }
 
 function toggleFormStatus(id) {
@@ -170,6 +173,7 @@ function toggleFormStatus(id) {
   showToast(form.active ? 'تم تعطيل النموذج' : 'تم تفعيل النموذج', 'success');
   renderForms();
   renderOverview();
+  if (typeof pushToCloudAuto === 'function') pushToCloudAuto();
 }
 
 function previewForm(id) {
