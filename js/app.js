@@ -186,7 +186,7 @@ async function pushToCloudAuto() {
     const data = {};
     for (let i = 0; i < localStorage.length; i++) {
       const key = localStorage.key(i);
-      if (key && key.startsWith('formflow_') && !key.includes('sync_url')) {
+      if (key && key.startsWith('formflow_') && !key.includes('sync_url') && key !== 'formflow_session') {
         data[key] = localStorage.getItem(key);
       }
     }
@@ -210,7 +210,7 @@ async function pushToCloud() {
     const data = {};
     for (let i = 0; i < localStorage.length; i++) {
       const key = localStorage.key(i);
-      if (key && key.startsWith('formflow_') && !key.includes('sync_url')) {
+      if (key && key.startsWith('formflow_') && !key.includes('sync_url') && key !== 'formflow_session') {
         data[key] = localStorage.getItem(key);
       }
     }
@@ -238,7 +238,7 @@ async function pullFromCloud() {
     if (data && typeof data === 'object' && Object.keys(data).length > 0) {
       if (confirm('هل أنت متأكد من سحب البيانات؟ سيتم استبدال البيانات المحلية ببيانات السحاب.')) {
         for (const key in data) {
-          if (key.startsWith('formflow_')) localStorage.setItem(key, data[key]);
+          if (key.startsWith('formflow_') && key !== 'formflow_session') localStorage.setItem(key, data[key]);
         }
         showToast('تمت المزامنة بنجاح! جاري التحديث...', 'success');
         setTimeout(() => location.reload(), 1000);
@@ -262,7 +262,7 @@ async function pullFromCloudAuto() {
     const data = await resp.json();
     if (data && typeof data === 'object' && Object.keys(data).length > 0) {
       for (const key in data) {
-        if (key.startsWith('formflow_')) localStorage.setItem(key, data[key]);
+        if (key.startsWith('formflow_') && key !== 'formflow_session') localStorage.setItem(key, data[key]);
       }
       console.log('Auto-sync successful');
     }
