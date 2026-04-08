@@ -151,7 +151,8 @@ function loadSettings() {
   const activeBtn = document.querySelector(`.theme-option[onclick*="'${theme}'"]`);
   if (activeBtn) activeBtn.classList.add('active');
 
-  const syncUrl = localStorage.getItem('formflow_sync_url') || '';
+  // Load from localStorage or Fallback to MASTER_SYNC_URL
+  const syncUrl = localStorage.getItem('formflow_sync_url') || MASTER_SYNC_URL || '';
   const autoSync = localStorage.getItem('formflow_auto_sync') !== 'false';
   const urlEl = document.getElementById('global-sync-url');
   const autoEl = document.getElementById('auto-sync');
@@ -177,7 +178,7 @@ function saveSyncUrl() {
 }
 
 async function pushToCloudAuto() {
-  const url = localStorage.getItem('formflow_sync_url');
+  const url = localStorage.getItem('formflow_sync_url') || MASTER_SYNC_URL;
   const autoSync = localStorage.getItem('formflow_auto_sync') !== 'false';
   if (!url || !autoSync) return;
 
@@ -195,7 +196,7 @@ async function pushToCloudAuto() {
 }
 
 async function pushToCloud() {
-  const url = document.getElementById('global-sync-url').value.trim();
+  const url = document.getElementById('global-sync-url').value.trim() || MASTER_SYNC_URL;
   if (!url) { showToast('يرجى إدخال رابط المزامنة أولاً', 'error'); return; }
   localStorage.setItem('formflow_sync_url', url);
   localStorage.setItem('formflow_auto_sync', document.getElementById('auto-sync').checked);
@@ -224,7 +225,7 @@ async function pushToCloud() {
 }
 
 async function pullFromCloud() {
-  const url = document.getElementById('global-sync-url').value.trim();
+  const url = document.getElementById('global-sync-url').value.trim() || MASTER_SYNC_URL;
   if (!url) { showToast('يرجى إدخال رابط المزامنة أولاً', 'error'); return; }
   const btn = document.getElementById('btn-pull-cloud');
   const oldText = btn.innerHTML;
@@ -254,7 +255,7 @@ async function pullFromCloud() {
 }
 
 async function pullFromCloudAuto() {
-  const url = localStorage.getItem('formflow_sync_url');
+  const url = localStorage.getItem('formflow_sync_url') || MASTER_SYNC_URL;
   if (!url) return;
   try {
     const resp = await fetch(url);
