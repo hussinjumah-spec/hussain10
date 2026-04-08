@@ -359,8 +359,119 @@ function showResultPage(response, form) {
     </div>
   `;
 
-  // Update dashboard if admin
-  updateBadgeCounts();
+  // Show PDF download button if enabled
+  const pdfBtn = document.getElementById('pdf-download-container');
+  if (form.showPdfDownload !== false) { // Default to true if undefined
+    pdfBtn.style.display = 'block';
+    window.currentSubmission = { response, form };
+  } else {
+    pdfBtn.style.display = 'none';
+  }
+
+  // Reload responses table if admin dashboard is open
+  if (Auth.isAdmin()) {
+    updateBadgeCounts();
+    renderResponses();
+    renderOverview();
+  }
+}
+
+async function generateAndDownloadPdf(response, form) {
+  if (!response || !form) {
+    showToast('لم يتم العثور على بيانات الإجابة', 'error');
+    return;
+  }
+
+  const template = document.getElementById('pdf-template');
+  template.style.display = 'block';
+  
+  // Fill data
+  document.getElementById('pdf-form-title').textContent = form.title;
+  document.getElementById('pdf-participant-info').textContent = `${response.respondentName} • ${response.respondentPhone || ''}`;
+  
+  const scoreText = form.type === 'quiz' ? `${response.score} / ${response.totalPoints}` : 'تم التسليم بنجاح';
+  document.getElementById('pdf-score-text').textContent = scoreText;
+
+  const logoEl = document.getElementById('pdf-logo');
+  logoEl.innerHTML = form.logo ? `<img src="${form.logo}" style="max-height: 80px;">` : '<h2 style="color:var(--primary)">FormFlow</h2>';
+
+  const questionsList = document.getElementById('pdf-questions-list');
+  questionsList.innerHTML = '';
+
+  form.questions.forEach((q, i) => {
+    const ans = response.answers[q.id];
+    let ansText = ans || '-';
+    let isCorrect = true;
+    let correctText = '';
+
+    if (q.type === 'multiple-choice' || q.type === 'true-false') {
+      const selected = q.options.find(o => o.id === ans);
+      ansText = selected ? selected.text : '-';
+      const correct = q.options.find(o => o.correct);
+      isCorrect = selected ? selected.correct : false;
+      correctText = correct ? correct.text : '-';
+    }
+
+    const item = document.createElement('div');
+    item.style.marginBottom = '20px';
+    item.style.padding = '15px';
+    item.style.border = '1px solid #eee';
+    item.style.borderRadius = '8px';
+    item.style.textAlign = 'right';
+    item.style.direction = 'rtl';
+    
+    let statusHtml = '';
+    if (form.type === 'quiz') {
+      statusHtml = isCorrect 
+        ? `<span style="color: #27ae60; font-weight: bold; margin-right: 15px;">✓ إجابة صحيحة</span>`
+        : `<span style="color: #e74c3c; font-weight: bold; margin-right: 15px;">✗ إجابة خاطئة</span>`;
+    }
+
+    item.innerHTML = `
+      <div style="margin-bottom: 10px; font-weight: 700;">س ${i+1}: ${q.text} ${statusHtml}</div>
+      <div style="background: #fdfdfd; padding: 8px; border-radius: 4px; border: 1px dashed #ddd;">
+        <span style="color: #7f8c8d;">إجابتك:</span> <span style="font-weight: 500">${ansText}</span>
+      </div>
+      ${(!isCorrect && form.type === 'quiz') ? `
+      <div style="color: #27ae60; margin-top: 8px; font-size: 0.95rem; font-weight: 600;">
+         💡 الإجابة الصحيحة: ${correctText}
+      </div>` : ''}
+    `;
+    questionsList.appendChild(item);
+  });
+
+  const opt = {
+    margin: [10, 10],
+    filename: `تقرير_${response.respondentName}_${form.title}.pdf`,
+    image: { type: 'jpeg', quality: 0.98 },
+    html2canvas: { scale: 2, useCORS: true },
+    jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
+  };
+
+  try {
+    showToast('جاري إنشاء ملف PDF...', 'info');
+    await html2pdf().set(opt).from(template).save();
+    showToast('تم تحميل الملف بنجاح', 'success');
+  } catch (err) {
+    console.error(err);
+    showToast('فشل إنشاء ملف PDF', 'error');
+  } finally {
+    template.style.display = 'none';
+  }
+}
+
+async function downloadResponsePdf() {
+  const { response, form } = window.currentSubmission || {};
+  if (!response || !form) return;
+  await generateAndDownloadPdf(response, form);
+}
+
+async function downloadAdminPdf(respId) {
+  const resp = DB.getResponses().find(r => r.id === respId);
+  if (!resp) return;
+  const form = DB.getFormById(resp.formId);
+  if (!form) return;
+  await generateAndDownloadPdf(resp, form);
 }
 
 function retakeForm() {

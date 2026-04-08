@@ -94,6 +94,7 @@ function saveForm() {
     displayMode: document.getElementById('form-display-mode').value,
     active: document.getElementById('form-active').checked,
     showScore: document.getElementById('form-show-score').checked,
+    showPdfDownload: document.getElementById('form-show-pdf').checked,
     webhookUrl: document.getElementById('form-webhook').value.trim(),
     logo: formLogoData,
     questions: currentQuestions,
@@ -139,6 +140,7 @@ function editForm(id) {
   document.getElementById('form-display-mode').value = form.displayMode || 'one-by-one';
   document.getElementById('form-active').checked = form.active !== false;
   document.getElementById('form-show-score').checked = form.showScore !== false;
+  document.getElementById('form-show-pdf').checked = form.showPdfDownload !== false;
   document.getElementById('form-webhook').value = form.webhookUrl || '';
 
   const preview = document.getElementById('form-logo-preview');
@@ -504,9 +506,10 @@ function initNewForm() {
   document.getElementById('form-display-mode').value = 'one-by-one';
   document.getElementById('form-active').checked = true;
   document.getElementById('form-show-score').checked = true;
+  document.getElementById('form-show-pdf').checked = true;
   document.getElementById('form-webhook').value = '';
   document.getElementById('form-logo-preview').innerHTML = '<i class="fas fa-image"></i><span>إضافة شعار</span>';
-  document.getElementById('questions-container').innerHTML = '';
+  renderQuestions();
 }
 
 // -------- RESPONSES --------
@@ -547,6 +550,7 @@ function renderResponses(formId = 'all') {
         <td style="color:var(--text-muted);font-size:.8rem">${date}</td>
         <td>
           <button class="icon-btn" title="عرض التفاصيل" onclick="viewResponseDetail('${r.id}')"><i class="fas fa-eye"></i></button>
+          <button class="icon-btn" title="تحميل PDF" onclick="downloadAdminPdf('${r.id}')"><i class="fas fa-file-pdf" style="color:var(--danger)"></i></button>
         </td>
       </tr>`;
   }).join('');
@@ -595,7 +599,10 @@ function viewResponseDetail(respId) {
   }
   html += `</div>`;
 
-  openModal('تفاصيل الإجابة', html, '<button class="btn btn-ghost" onclick="closeModal()">إغلاق</button>');
+  openModal('تفاصيل الإجابة', html, `
+    <button class="btn btn-primary" onclick="downloadAdminPdf('${respId}')"><i class="fas fa-file-pdf"></i> تحميل PDF</button>
+    <button class="btn btn-ghost" onclick="closeModal()">إغلاق</button>
+  `);
 }
 
 // -------- EXPORT --------

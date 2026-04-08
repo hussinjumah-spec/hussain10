@@ -8,6 +8,7 @@
   <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;500;600;700;800;900&family=Tajawal:wght@300;400;500;700;800&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
   <link rel="stylesheet" href="css/main.css">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
 </head>
 <body>
 
@@ -492,11 +493,19 @@
                     </label>
                   </div>
                   <div class="form-option">
-                    <label>عرض النتيجة</label>
+                    <label>إظهار النتيجة (للاختبار)</label>
                     <label class="toggle-switch">
                       <input type="checkbox" id="form-show-score" checked>
                       <span class="toggle-slider"></span>
-                      <span class="toggle-label">مفعّل</span>
+                      <span class="toggle-label">عرض النتيجة</span>
+                    </label>
+                  </div>
+                  <div class="form-option">
+                    <label>تحميل PDF للمشارك</label>
+                    <label class="toggle-switch">
+                      <input type="checkbox" id="form-show-pdf" checked>
+                      <span class="toggle-slider"></span>
+                      <span class="toggle-label">إظهار الزر</span>
                     </label>
                   </div>
                 </div>
@@ -760,8 +769,34 @@
           <h2 id="result-title">شكراً لك!</h2>
           <p id="result-message">تم إرسال إجاباتك بنجاح</p>
           <div id="result-details" class="result-details"></div>
+          
+          <div id="pdf-download-container" style="margin-top:2rem;display:none">
+            <button class="btn btn-primary" onclick="downloadResponsePdf()">
+              <i class="fas fa-file-pdf"></i> تحميل تقرير الإجابات (PDF)
+            </button>
+            <p style="font-size:1.1rem; font-weight:600; margin-top:1rem; color:var(--primary);">شكراً لمشاركتك! 🎉</p>
+          </div>
         </div>
       </div>
+    </div>
+  </div>
+
+  <!-- PDF Template (Hidden) -->
+  <div id="pdf-template" style="display:none; padding: 40px; direction: rtl; font-family: 'Outfit', sans-serif;">
+    <div style="text-align:center; margin-bottom: 30px; border-bottom: 2px solid #eee; padding-bottom: 20px;">
+        <div id="pdf-logo" style="margin-bottom: 15px;"></div>
+        <h1 id="pdf-form-title" style="color: #2c3e50; margin: 0;"></h1>
+        <p id="pdf-participant-info" style="color: #7f8c8d; font-size: 1.1rem; margin-top: 10px;"></p>
+    </div>
+    
+    <div id="pdf-score-summary" style="background: #f8f9fa; padding: 15px; border-radius: 10px; margin-bottom: 30px; text-align: center;">
+        <h2 style="margin: 0; color: #2c3e50;">النتيجة: <span id="pdf-score-text"></span></h2>
+    </div>
+
+    <div id="pdf-questions-list"></div>
+    
+    <div style="margin-top: 40px; text-align: center; border-top: 1px solid #eee; padding-top: 20px; color: #95a5a6; font-size: 0.8rem;">
+        تم الإنشاء بواسطة منصة FormFlow
     </div>
   </div>
 
