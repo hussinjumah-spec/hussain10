@@ -1,22 +1,35 @@
 /*
   ========================================================================
-  FORMFLOW ULTIMATE SYNC & RESPONSE SCRIPT
+  FORMFLOW ULTIMATE SYNC & RESPONSE SCRIPT (V2 - CHUNKED)
   ========================================================================
   هذا الكود يدعم المزامنة السحابية للنماذج وحفظ الإجابات في نفس الوقت
+  مع دعم كامل للصور لتفادي حدود سعة خلايا إكسيل (50 ألف حرف).
 */
 
 var DATABASE_SHEET = "Cloud_Database"; // ورقة المزامنة
 var RESPONSES_SHEET = "Responses_Data"; // ورقة الإجابات
+var MAX_CELL_LENGTH = 49000;
 
 function doPost(e) {
   var ss = SpreadsheetApp.getActiveSpreadsheet();
-  var data = JSON.parse(e.postData.contents);
+  var payloadString = e.postData.contents;
+  var data = JSON.parse(payloadString);
   
   // الحالة 1: مزامنة القاعدة بالكامل (Cloud Sync)
-  // إذا كانت البيانات تحتوي على مفاتيح تبدأ بـ formflow_
   if (Object.keys(data).some(function(k) { return k.indexOf('formflow_') === 0; })) {
     var syncSheet = ss.getSheetByName(DATABASE_SHEET) || ss.insertSheet(DATABASE_SHEET);
-    syncSheet.getRange(1, 1).setValue(e.postData.contents);
+    syncSheet.clear(); // مسح البيانات القديمة
+    
+    // تقسيم النص الطويل لعدة خلايا في العمود الأول لتخطي حاجز إكسيل
+    var chunks = [];
+    for (var i = 0; i < payloadString.length; i += MAX_CELL_LENGTH) {
+      chunks.push([payloadString.substring(i, i + MAX_CELL_LENGTH)]);
+    }
+    
+    if (chunks.length > 0) {
+      syncSheet.getRange(1, 1, chunks.length, 1).setValues(chunks);
+    }
+    
     return ContentService.createTextOutput("Sync Success").setMimeType(ContentService.MimeType.TEXT);
   } 
   
@@ -29,8 +42,15 @@ function doPost(e) {
       respSheet.appendRow(Object.keys(data));
     }
     
-    // إضافة بيانات الإجابة
-    respSheet.appendRow(Object.values(data));
+    // فحص الإجابات وقص الصور الطويلة فقط داخل ورقة العرض (كي لا يتعطل الإكسيل)
+    var safeValues = Object.values(data).map(function(val) {
+      if (typeof val === 'string' && val.length > MAX_CELL_LENGTH) {
+        return "[صورة/بيانات كبيرة مخزنة في الحفظ السحابي للوحة التحكم]";
+      }
+      return val;
+    });
+    
+    respSheet.appendRow(safeValues);
     return ContentService.createTextOutput("Response Saved").setMimeType(ContentService.MimeType.TEXT);
   }
 }
@@ -38,8 +58,14 @@ function doPost(e) {
 function doGet() {
   var ss = SpreadsheetApp.getActiveSpreadsheet();
   var sheet = ss.getSheetByName(DATABASE_SHEET);
-  // سحب آخر نسخة مخزنة من قاعدة البيانات
-  var data = sheet ? sheet.getRange(1, 1).getValue() : "{}";
+  var data = "{}";
+  
+  if (sheet) {
+    // سحب كل الخلايا المجزأة ودمجها مجدداً
+    var values = sheet.getRange(1, 1, sheet.getLastRow() || 1, 1).getValues();
+    var fullString = values.map(function(row) { return row[0]; }).join('');
+    if (fullString) data = fullString;
+  }
   
   return ContentService.createTextOutput(data).setMimeType(ContentService.MimeType.JSON);
 }

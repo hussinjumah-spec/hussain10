@@ -1,6 +1,6 @@
 // ==================== MAIN APP ====================
 // اضف رابط المزامنة هنا ليعمل البرنامج تلقائيًا عند الجميع
-const MASTER_SYNC_URL = "https://script.google.com/macros/s/AKfycbxAMn-kGBwM4xkt5Tgy1jY5RG8CmVB1VDWp56tSBRE9urHof-tPNgf8QIwPT8IHSX9O/exec"; 
+const MASTER_SYNC_URL = "https://script.google.com/macros/s/AKfycbzvj2hC-tjs8Td6uPG4hORZTVoPnk4eGVS1eJLQFvbMTEQFU9U_OiHf65BflJUNBvOm/exec"; 
 
 // -------- PAGE NAVIGATION --------
 function showPage(pageId) {
