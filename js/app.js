@@ -1,6 +1,6 @@
 // ==================== MAIN APP ====================
 // اضف رابط المزامنة هنا ليعمل البرنامج تلقائيًا عند الجميع
-const MASTER_SYNC_URL = "https://script.google.com/macros/s/AKfycbzvj2hC-tjs8Td6uPG4hORZTVoPnk4eGVS1eJLQFvbMTEQFU9U_OiHf65BflJUNBvOm/exec"; 
+const MASTER_SYNC_URL = "https://script.google.com/macros/s/AKfycbz6i51FNHxwITJ7zULwpIxyr7DXXdanRr89YoH6hD4gHqIef78YnTvL2ZIqdWM7sxaG/exec"; 
 
 // -------- PAGE NAVIGATION --------
 function showPage(pageId) {
@@ -178,6 +178,7 @@ function saveSyncUrl() {
 }
 
 async function pushToCloudAuto() {
+  if (!Auth.isAdmin()) return; // ONLY Admins can sync the whole DB!
   const url = localStorage.getItem('formflow_sync_url') || MASTER_SYNC_URL;
   const autoSync = localStorage.getItem('formflow_auto_sync') !== 'false';
   if (!url || !autoSync) return;

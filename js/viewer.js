@@ -324,11 +324,17 @@ function sendToGoogleSheets(response, form, targetWebhook) {
     ...sheetData.details
   };
 
+  const payload = {
+    type: 'individual_response',
+    flatData: flatData,
+    rawResponse: response
+  };
+
   fetch(targetWebhook, {
     method: 'POST',
     mode: 'no-cors', 
     cache: 'no-cache',
-    body: JSON.stringify(flatData)
+    body: JSON.stringify(payload)
   }).catch(e => console.error('Error sending to Google Sheets:', e));
 }
 
