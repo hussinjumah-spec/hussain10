@@ -1,4 +1,6 @@
 // ==================== MAIN APP ====================
+// اضف رابط المزامنة هنا ليعمل البرنامج تلقائيًا عند الجميع
+const MASTER_SYNC_URL = "https://script.google.com/macros/s/AKfycbxAMn-kGBwM4xkt5Tgy1jY5RG8CmVB1VDWp56tSBRE9urHof-tPNgf8QIwPT8IHSX9O/exec"; 
 
 // -------- PAGE NAVIGATION --------
 function showPage(pageId) {
@@ -316,17 +318,26 @@ function scrollToFeatures() {
   document.getElementById('features')?.scrollIntoView({ behavior: 'smooth' });
 }
 
-function checkURLForm() {
+async function checkURLForm() {
   const params = new URLSearchParams(window.location.search);
   const slug = params.get('form');
-  if (slug) {
-    const form = DB.getFormBySlug(slug);
-    if (form && form.active) {
-      loadFormViewer(form);
-      showPage('form-viewer');
-    } else {
-      showToast('النموذج غير موجود أو غير نشط', 'error');
-    }
+  if (!slug) return;
+
+  let form = DB.getFormBySlug(slug);
+  const syncUrl = MASTER_SYNC_URL || localStorage.getItem('formflow_sync_url');
+
+  // If form not found and we have a sync URL, try to pull data first
+  if (!form && syncUrl) {
+    console.log('Form not found locally, attempting cloud pull...');
+    await pullFromCloudAuto();
+    form = DB.getFormBySlug(slug);
+  }
+
+  if (form && form.active) {
+    loadFormViewer(form);
+    showPage('form-viewer');
+  } else {
+    showToast('النموذج غير موجود أو غير نشط', 'error');
   }
 }
 
