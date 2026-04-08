@@ -352,7 +352,7 @@ function buildQuestionCard(q, idx) {
     'true-false': 'صح أو خطأ',
     'short-answer': 'إجابة قصيرة',
     'paragraph': 'فقرة',
-    'file-upload': 'رفع ملف'
+    'file-upload': 'رفع صورة'
   };
   const typeIcons = {
     'multiple-choice': 'fa-list-ul',
@@ -393,7 +393,7 @@ function buildQuestionCard(q, idx) {
   } else if (q.type === 'paragraph') {
     optionsHtml = `<textarea class="form-control" rows="3" placeholder="(حقل الفقرة - للمعاينة فقط)" disabled style="opacity:.5"></textarea>`;
   } else if (q.type === 'file-upload') {
-    optionsHtml = `<div class="vq-file-upload" style="pointer-events:none;opacity:.5"><i class="fas fa-upload"></i><p>رفع ملف</p></div>`;
+    optionsHtml = `<div class="vq-file-upload" style="pointer-events:none;opacity:.5"><i class="fas fa-image"></i><p>أداة لرفع الصور فقط</p></div>`;
   }
 
   const isCollapsed = q.isCollapsed === true;
@@ -654,9 +654,12 @@ function viewResponseDetail(respId) {
     if (q.type === 'multiple-choice' || q.type === 'true-false') {
       const opt = q.options.find(o => o.id === ans);
       ansText = opt ? opt.text : 'لم يجب';
+    } else if (typeof ans === 'string' && ans.startsWith('data:image')) {
+      ansText = `<img src="${ans}" style="max-height: 120px; border-radius: 8px; margin-top: 10px; border: 1px solid var(--primary);">`;
     } else {
       ansText = ans || 'لم يجب';
     }
+    
     html += `
       <div style="background:var(--dark-3);border-radius:.75rem;padding:1rem">
         <div style="font-size:.75rem;color:var(--primary);font-weight:700;margin-bottom:.25rem">سؤال ${idx + 1}</div>

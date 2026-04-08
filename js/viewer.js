@@ -83,11 +83,11 @@ function buildViewerQuestion(q, idx) {
     inputHtml = `
       <div class="vq-file-upload" onclick="document.getElementById('file-${q.id}').click()">
         <i class="fas fa-cloud-upload-alt"></i>
-        <p>انقر لرفع ملف أو اسحبه هنا</p>
-        <p style="font-size:.75rem;margin-top:.25rem">PNG, JPG, PDF, DOCX حتى 10MB</p>
+        <p>انقر لرفع صورة أو اسحبها هنا</p>
+        <p style="font-size:.75rem;margin-top:.25rem">الرجاء رفع صورة (PNG, JPG)</p>
         <div id="file-name-${q.id}" style="margin-top:.75rem;font-size:.85rem;color:var(--primary)"></div>
       </div>
-      <input type="file" id="file-${q.id}" hidden onchange="handleFileUpload('${q.id}', this)">`;
+      <input type="file" id="file-${q.id}" accept="image/*" hidden onchange="handleFileUpload('${q.id}', this)">`;
   }
 
   const reqSpan = q.required ? `<span class="vq-required">*</span>` : '';
@@ -113,10 +113,50 @@ function selectOption(qId, optId) {
 function handleFileUpload(qId, input) {
   const file = input.files[0];
   if (!file) return;
-  uploadedFiles[qId] = file.name;
-  viewerAnswers[qId] = file.name;
-  const nameEl = document.getElementById(`file-name-${qId}`);
-  if (nameEl) nameEl.textContent = `✓ ${file.name}`;
+
+  if (!file.type.startsWith('image/')) {
+    showToast('عذراً، يرجى رفع ملفات صور فقط', 'error');
+    return;
+  }
+
+  showToast('جاري معالجة الصورة...', 'info');
+  const reader = new FileReader();
+  reader.onload = function(e) {
+    const img = new Image();
+    img.onload = function() {
+      const canvas = document.createElement('canvas');
+      const MAX_WIDTH = 600; 
+      const MAX_HEIGHT = 600;
+      let width = img.width;
+      let height = img.height;
+
+      if (width > height) {
+        if (width > MAX_WIDTH) { height *= MAX_WIDTH / width; width = MAX_WIDTH; }
+      } else {
+        if (height > MAX_HEIGHT) { width *= MAX_HEIGHT / height; height = MAX_HEIGHT; }
+      }
+      
+      canvas.width = width;
+      canvas.height = height;
+      const ctx = canvas.getContext('2d');
+      ctx.drawImage(img, 0, 0, width, height);
+      
+      const dataUrl = canvas.toDataURL('image/jpeg', 0.6); 
+      
+      viewerAnswers[qId] = dataUrl;
+      const previewEl = document.getElementById(`file-name-${qId}`);
+      if (previewEl) {
+        previewEl.innerHTML = `
+          <div style="display:flex;align-items:center;gap:10px;justify-content:center;margin-top:10px;">
+            <img src="${dataUrl}" style="max-height: 80px; border-radius: 8px; border: 1px solid var(--primary);">
+            <span style="font-size:0.8rem;color:var(--success);font-weight:bold"><i class="fas fa-check"></i> تم إرفاق الصورة</span>
+          </div>
+        `;
+      }
+    };
+    img.src = e.target.result;
+  }
+  reader.readAsDataURL(file);
 }
 
 // -------- NAVIGATION --------
@@ -286,9 +326,8 @@ function sendToGoogleSheets(response, form, targetWebhook) {
 
   fetch(targetWebhook, {
     method: 'POST',
-    mode: 'no-cors', // IMPORTANT: Google Apps Script usually needs this or CORS config
+    mode: 'no-cors', 
     cache: 'no-cache',
-    headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(flatData)
   }).catch(e => console.error('Error sending to Google Sheets:', e));
 }
@@ -413,6 +452,14 @@ async function generateAndDownloadPdf(response, form) {
       correctText = correct ? correct.text : '-';
     }
 
+    let ansHtml = '';
+    if (q.type === 'file-upload' && ans && ans.startsWith('data:image')) {
+      ansHtml = `<div style="text-align: center; margin-top: 10px;"><img src="${ans}" style="max-width: 250px; max-height: 250px; border-radius: 8px; border: 1px solid #ddd;"></div>`;
+      ansText = '';
+    } else {
+      ansHtml = `<span style="font-weight: 500">${ansText}</span>`;
+    }
+
     const item = document.createElement('div');
     item.style.marginBottom = '20px';
     item.style.padding = '15px';
@@ -431,7 +478,7 @@ async function generateAndDownloadPdf(response, form) {
     item.innerHTML = `
       <div style="margin-bottom: 10px; font-weight: 700;">س ${i+1}: ${q.text} ${statusHtml}</div>
       <div style="background: #fdfdfd; padding: 8px; border-radius: 4px; border: 1px dashed #ddd;">
-        <span style="color: #7f8c8d;">إجابتك:</span> <span style="font-weight: 500">${ansText}</span>
+        <span style="color: #7f8c8d;">إجابتك:</span> ${ansHtml}
       </div>
       ${(!isCorrect && form.type === 'quiz') ? `
       <div style="color: #27ae60; margin-top: 8px; font-size: 0.95rem; font-weight: 600;">
