@@ -246,14 +246,15 @@ function submitForm() {
   };
 
   DB.addResponse(response);
-  if (viewerForm.webhookUrl) {
-    sendToGoogleSheets(response, viewerForm);
+  const targetWebhook = viewerForm.webhookUrl || (typeof MASTER_SYNC_URL !== 'undefined' ? MASTER_SYNC_URL : null);
+  if (targetWebhook) {
+    sendToGoogleSheets(response, viewerForm, targetWebhook);
   }
   if (typeof pushToCloudAuto === 'function') pushToCloudAuto();
   showResultPage(response, viewerForm);
 }
 
-function sendToGoogleSheets(response, form) {
+function sendToGoogleSheets(response, form, targetWebhook) {
   // Prepare data for Google Sheets
   const sheetData = {
     respondentName: response.respondentName,
@@ -283,7 +284,7 @@ function sendToGoogleSheets(response, form) {
     ...sheetData.details
   };
 
-  fetch(form.webhookUrl, {
+  fetch(targetWebhook, {
     method: 'POST',
     mode: 'no-cors', // IMPORTANT: Google Apps Script usually needs this or CORS config
     cache: 'no-cache',

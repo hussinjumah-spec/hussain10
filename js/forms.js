@@ -61,6 +61,8 @@ function renderForms() {
           <div class="form-card-actions">
             <button class="icon-btn" title="معاينة النموذج" onclick="previewForm('${form.id}')"><i class="fas fa-eye"></i></button>
             <button class="icon-btn" title="نسخ الرابط" onclick="copyFormLink('${form.id}')"><i class="fas fa-link"></i></button>
+            <button class="icon-btn" title="مشاركة رابط الإكسيل" onclick="copySheetLink('${form.id}')"><i class="fas fa-file-excel" style="color: #27ae60"></i></button>
+            <button class="icon-btn" title="تكرار النموذج" onclick="copyFullForm('${form.id}')"><i class="fas fa-copy"></i></button>
             <button class="icon-btn" title="عرض الإجابات" onclick="viewFormResponses('${form.id}')"><i class="fas fa-poll"></i></button>
             <button class="icon-btn" title="تعديل" onclick="editForm('${form.id}')"><i class="fas fa-edit"></i></button>
             <button class="icon-btn" title="${form.active ? 'تعطيل' : 'تفعيل'}" onclick="toggleFormStatus('${form.id}')">
@@ -81,6 +83,34 @@ function filterByStatus(status, btn) {
   renderForms();
 }
 
+// -------- CLONE FORM --------
+function copyFullForm(id) {
+  const form = DB.getFormById(id);
+  if (!form) return;
+
+  const newForm = JSON.parse(JSON.stringify(form));
+  newForm.id = DB.generateId();
+  newForm.title = newForm.title + ' (نسخة)';
+  newForm.slug = DB.generateSlug(newForm.title);
+  newForm.createdAt = newForm.updatedAt = new Date().toISOString();
+  
+  if (newForm.questions) {
+    newForm.questions.forEach(q => {
+      q.id = DB.generateId();
+      if (q.options) {
+        q.options.forEach(opt => opt.id = DB.generateId());
+      }
+    });
+  }
+
+  DB.addForm(newForm);
+  showToast('تم نسخ النموذج بنجاح', 'success');
+  renderForms();
+  updateBadgeCounts();
+  renderOverview();
+  if (typeof pushToCloudAuto === 'function') pushToCloudAuto();
+}
+
 // -------- SAVE FORM --------
 function saveForm() {
   const title = document.getElementById('form-title').value.trim();
@@ -93,9 +123,10 @@ function saveForm() {
     type: document.getElementById('form-type').value,
     displayMode: document.getElementById('form-display-mode').value,
     active: document.getElementById('form-active').checked,
-    showScore: document.getElementById('form-show-score').checked,
+    showScore: document.getElementById('form-show-score')?.checked ?? true,
     showPdfDownload: document.getElementById('form-show-pdf').checked,
     webhookUrl: document.getElementById('form-webhook').value.trim(),
+    sheetUrl: document.getElementById('form-sheet-url').value.trim(),
     logo: formLogoData,
     questions: currentQuestions,
     updatedAt: new Date().toISOString()
@@ -142,6 +173,7 @@ function editForm(id) {
   document.getElementById('form-show-score').checked = form.showScore !== false;
   document.getElementById('form-show-pdf').checked = form.showPdfDownload !== false;
   document.getElementById('form-webhook').value = form.webhookUrl || '';
+  document.getElementById('form-sheet-url').value = form.sheetUrl || '';
 
   const preview = document.getElementById('form-logo-preview');
   if (form.logo) preview.innerHTML = `<img src="${form.logo}" alt="logo">`;
@@ -214,6 +246,48 @@ function copyFormLink(id) {
     .then(() => showToast('تم نسخ الرابط بنجاح!', 'success'))
     .catch(() => {
       openModal('رابط النموذج', `
+        <div class="form-group">
+          <label>لم نتمكن من النسخ تلقائياً، يرجى نسخه يدوياً:</label>
+          <input type="text" class="form-control" value="${link}" readonly onclick="this.select()">
+        </div>`,
+        '<button class="btn btn-primary" onclick="closeModal()">موافق</button>'
+      );
+    });
+}
+
+function copySheetLink(id) {
+  const form = DB.getFormById(id);
+  if (!form) return;
+  if (!form.sheetUrl) {
+    showToast('الرجاء إضافة رابط الإكسيل في إعدادات النموذج أولاً', 'warning');
+    return;
+  }
+  
+  const link = form.sheetUrl;
+  
+  const copyToClipboard = (text) => {
+    if (navigator.clipboard && window.isSecureContext) {
+      return navigator.clipboard.writeText(text);
+    } else {
+      const textArea = document.createElement("textarea");
+      textArea.value = text;
+      textArea.style.position = "fixed";
+      textArea.style.left = "-9999px";
+      textArea.style.top = "0";
+      document.body.appendChild(textArea);
+      textArea.focus();
+      textArea.select();
+      return new Promise((res, rej) => {
+        document.execCommand('copy') ? res() : rej();
+        textArea.remove();
+      });
+    }
+  };
+
+  copyToClipboard(link)
+    .then(() => showToast('تم نسخ رابط الإكسيل بنجاح!', 'success'))
+    .catch(() => {
+      openModal('رابط الإكسيل', `
         <div class="form-group">
           <label>لم نتمكن من النسخ تلقائياً، يرجى نسخه يدوياً:</label>
           <input type="text" class="form-control" value="${link}" readonly onclick="this.select()">
@@ -508,6 +582,7 @@ function initNewForm() {
   document.getElementById('form-show-score').checked = true;
   document.getElementById('form-show-pdf').checked = true;
   document.getElementById('form-webhook').value = '';
+  document.getElementById('form-sheet-url').value = '';
   document.getElementById('form-logo-preview').innerHTML = '<i class="fas fa-image"></i><span>إضافة شعار</span>';
   renderQuestions();
 }
