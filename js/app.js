@@ -146,14 +146,14 @@ function loadSettings() {
   const av = document.getElementById('settings-avatar');
   if (av) av.textContent = u.name?.charAt(0) || 'م';
 
-  const theme = localStorage.getItem('Hussain_theme') || 'dark';
+  const theme = localStorage.getItem('formflow_theme') || 'dark';
   document.querySelectorAll('.theme-option').forEach(o => o.classList.remove('active'));
   const activeBtn = document.querySelector(`.theme-option[onclick*="'${theme}'"]`);
   if (activeBtn) activeBtn.classList.add('active');
 
   // Load from localStorage or Fallback to MASTER_SYNC_URL
-  const syncUrl = localStorage.getItem('Hussain_sync_url') || MASTER_SYNC_URL || '';
-  const autoSync = localStorage.getItem('Hussain_auto_sync') !== 'false';
+  const syncUrl = localStorage.getItem('formflow_sync_url') || MASTER_SYNC_URL || '';
+  const autoSync = localStorage.getItem('formflow_auto_sync') !== 'false';
   const urlEl = document.getElementById('global-sync-url');
   const autoEl = document.getElementById('auto-sync');
   if (urlEl) urlEl.value = syncUrl;
@@ -162,7 +162,7 @@ function loadSettings() {
 
 function setTheme(theme) {
   document.documentElement.setAttribute('data-theme', theme);
-  localStorage.setItem('Hussain_theme', theme);
+  localStorage.setItem('formflow_theme', theme);
   document.querySelectorAll('.theme-option').forEach(o => o.classList.remove('active'));
   const activeBtn = document.querySelector(`.theme-option[onclick*="'${theme}'"]`);
   if (activeBtn) activeBtn.classList.add('active');
@@ -173,21 +173,21 @@ function setTheme(theme) {
 function saveSyncUrl() {
   const url = document.getElementById('global-sync-url').value.trim();
   const auto = document.getElementById('auto-sync').checked;
-  localStorage.setItem('Hussain_sync_url', url);
-  localStorage.setItem('Hussain_auto_sync', auto);
+  localStorage.setItem('formflow_sync_url', url);
+  localStorage.setItem('formflow_auto_sync', auto);
 }
 
 async function pushToCloudAuto() {
   if (!Auth.isAdmin()) return; // ONLY Admins can sync the whole DB!
-  const url = localStorage.getItem('Hussain_sync_url') || MASTER_SYNC_URL;
-  const autoSync = localStorage.getItem('Hussain_auto_sync') !== 'false';
+  const url = localStorage.getItem('formflow_sync_url') || MASTER_SYNC_URL;
+  const autoSync = localStorage.getItem('formflow_auto_sync') !== 'false';
   if (!url || !autoSync) return;
 
   try {
     const data = {};
     for (let i = 0; i < localStorage.length; i++) {
       const key = localStorage.key(i);
-      if (key && key.startsWith('Hussain_') && !key.includes('sync_url') && key !== 'Hussain_session') {
+      if (key && key.startsWith('formflow_') && !key.includes('sync_url') && key !== 'formflow_session') {
         data[key] = localStorage.getItem(key);
       }
     }
@@ -199,8 +199,8 @@ async function pushToCloudAuto() {
 async function pushToCloud() {
   const url = document.getElementById('global-sync-url').value.trim() || MASTER_SYNC_URL;
   if (!url) { showToast('يرجى إدخال رابط المزامنة أولاً', 'error'); return; }
-  localStorage.setItem('Hussain_sync_url', url);
-  localStorage.setItem('Hussain_auto_sync', document.getElementById('auto-sync').checked);
+  localStorage.setItem('formflow_sync_url', url);
+  localStorage.setItem('formflow_auto_sync', document.getElementById('auto-sync').checked);
 
   const btn = document.getElementById('btn-push-cloud');
   const oldText = btn.innerHTML;
@@ -211,7 +211,7 @@ async function pushToCloud() {
     const data = {};
     for (let i = 0; i < localStorage.length; i++) {
       const key = localStorage.key(i);
-      if (key && key.startsWith('Hussain_') && !key.includes('sync_url') && key !== 'Hussain_session') {
+      if (key && key.startsWith('formflow_') && !key.includes('sync_url') && key !== 'formflow_session') {
         data[key] = localStorage.getItem(key);
       }
     }
@@ -239,7 +239,7 @@ async function pullFromCloud() {
     if (data && typeof data === 'object' && Object.keys(data).length > 0) {
       if (confirm('هل أنت متأكد من سحب البيانات؟ سيتم استبدال البيانات المحلية ببيانات السحاب.')) {
         for (const key in data) {
-          if (key.startsWith('Hussain_') && key !== 'Hussain_session') localStorage.setItem(key, data[key]);
+          if (key.startsWith('formflow_') && key !== 'formflow_session') localStorage.setItem(key, data[key]);
         }
         showToast('تمت المزامنة بنجاح! جاري التحديث...', 'success');
         setTimeout(() => location.reload(), 1000);
@@ -256,14 +256,14 @@ async function pullFromCloud() {
 }
 
 async function pullFromCloudAuto() {
-  const url = localStorage.getItem('Hussain_sync_url') || MASTER_SYNC_URL;
+  const url = localStorage.getItem('formflow_sync_url') || MASTER_SYNC_URL;
   if (!url) return;
   try {
     const resp = await fetch(url);
     const data = await resp.json();
     if (data && typeof data === 'object' && Object.keys(data).length > 0) {
       for (const key in data) {
-        if (key.startsWith('Hussain_') && key !== 'Hussain_session') localStorage.setItem(key, data[key]);
+        if (key.startsWith('formflow_') && key !== 'formflow_session') localStorage.setItem(key, data[key]);
       }
       console.log('Auto-sync successful');
     }
@@ -307,7 +307,7 @@ function showNotifications() {
       <div style="padding:1rem;background:var(--dark-3);border-radius:.75rem;display:flex;gap:.75rem;align-items:flex-start">
         <i class="fas fa-bell" style="color:var(--primary);margin-top:.15rem"></i>
         <div>
-          <div style="font-weight:600;font-size:.9rem">مرحبلاً بك في Hussain</div>
+          <div style="font-weight:600;font-size:.9rem">مرحبلاً بك في FormFlow</div>
           <div style="font-size:.8rem;color:var(--text-muted)">ابدأ بإنشاء نموذجك الأول</div>
         </div>
       </div>
@@ -326,7 +326,7 @@ async function checkURLForm() {
   if (!slug) return;
 
   let form = DB.getFormBySlug(slug);
-  const syncUrl = MASTER_SYNC_URL || localStorage.getItem('Hussain_sync_url');
+  const syncUrl = MASTER_SYNC_URL || localStorage.getItem('formflow_sync_url');
 
   // If form not found and we have a sync URL, try to pull data first
   if (!form && syncUrl) {
@@ -355,7 +355,7 @@ document.head.appendChild(analyticsStyle);
 
 // ==================== INIT ====================
 document.addEventListener('DOMContentLoaded', () => {
-  const savedTheme = localStorage.getItem('Hussain_theme') || 'dark';
+  const savedTheme = localStorage.getItem('formflow_theme') || 'dark';
   document.documentElement.setAttribute('data-theme', savedTheme);
 
   if (Auth.init()) {
@@ -371,7 +371,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
   checkURLForm();
 
-  const autoSync = localStorage.getItem('Hussain_auto_sync') !== 'false';
+  const autoSync = localStorage.getItem('formflow_auto_sync') !== 'false';
   if (autoSync) pullFromCloudAuto();
 
   const formActiveToggle = document.getElementById('form-active');
@@ -395,7 +395,7 @@ function exportDatabase() {
   const data = {};
   for (let i = 0; i < localStorage.length; i++) {
     const key = localStorage.key(i);
-    if (key && key.startsWith('Hussain_')) {
+    if (key && key.startsWith('formflow_')) {
       data[key] = localStorage.getItem(key);
     }
   }
@@ -403,7 +403,7 @@ function exportDatabase() {
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
   a.href = url;
-  a.download = `Hussain_backup_${new Date().toISOString().split('T')[0]}.json`;
+  a.download = `formflow_backup_${new Date().toISOString().split('T')[0]}.json`;
   a.click();
   showToast('تم تصدير النسخة الاحتياطية بنجاح', 'success');
 }
@@ -419,7 +419,7 @@ function importDatabase(event) {
       if (confirm('تنبيه: سيتم استبدال جميع البيانات الحالية بالبيانات المستوردة. هل تريد الاستمرار؟')) {
         for (let i = localStorage.length - 1; i >= 0; i--) {
           const key = localStorage.key(i);
-          if (key && key.startsWith('Hussain_')) localStorage.removeItem(key);
+          if (key && key.startsWith('formflow_')) localStorage.removeItem(key);
         }
         for (const key in data) {
           localStorage.setItem(key, data[key]);
